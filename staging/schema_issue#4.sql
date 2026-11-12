@@ -17,9 +17,9 @@ CREATE TABLE Attempt (
 	Duration INT NOT NULL,
 
 	CONSTRAINT PK_Attempt
-		PRIMARY KEY (Student_Email, Quiz_ID, Start_time),
+		PRIMARY KEY (Student_ID, Quiz_ID, Start_time),
 	CONSTRAINT FK_Attempt_Student
-		FOREIGN KEY (Student_Email) REFERENCES Student(Email),
+		FOREIGN KEY (Student_ID) REFERENCES Student(ID),
 	CONSTRAINT FK_Attempt_Quiz
 		FOREIGN KEY (Quiz_ID) REFERENCES Quiz(ID),
 

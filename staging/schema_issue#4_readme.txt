@@ -1,5 +1,7 @@
+description for file schemas_issue#4.sql:
+
 Attempt:
-- Student_Email SMALLINT NOT NULL,
+- Student_ID SMALLINT NOT NULL,
 	maxium 32.000 id, phù hợp với scope
 - Quiz_ID SMALLINT NOT NULL,
 	maxium 32.000 id
