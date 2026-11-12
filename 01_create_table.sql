@@ -1,1 +1,1 @@
--- file này sẽ tổng hợp toàn bộ workload của folder staging
+-- file này sẽ tổng hợp toàn bộ workload của folder staging sau khi các thành viên trong team làm xong
