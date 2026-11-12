@@ -12,7 +12,7 @@ Dự án xây dựng hệ thống quản lý học tập trực tuyến lấy c�
 
 **Danh sách thành viên:**
 
-| Họ và tên | Mã số sinh viên | Mức độ đóng góp |
+| Họ và tên | Mã số sinh viên | task |
 | --- | --- | --- |
 | Lương Thế Hoàng | 2453471 |  |
 | Hoàng Lâm Đăng Khôi | 2452575 |  |
