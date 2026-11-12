@@ -14,21 +14,40 @@ Báo cáo thiết kế cơ sở dữ liệu Assignment 1: [Bản xem trước tr
 * Chủ nhân của Pull Request tự chịu trách nhiệm giải quyết các xung đột mã nguồn.
 * Các tệp lệnh cấu trúc bảng và dữ liệu mẫu tuân thủ nguyên tắc tiến không lùi. Các tệp lệnh chứa logic thủ tục, hàm, trigger áp dụng nguyên tắc ghi đè tại chỗ.
 
-## Quy trình cài đặt
-
-Phần này đang được để trống và sẽ bổ sung hướng dẫn cài đặt chi tiết trên máy cá nhân sau.
-
-## Quy trình chạy Database Migration
-
-Để khởi tạo cơ sở dữ liệu, người dùng cần thực thi các tệp lệnh SQL trong thư mục dữ liệu theo đúng số thứ tự ở đầu tên tệp từ trên xuống dưới. Trong các bản cập nhật tiếp theo, nhóm sẽ bổ sung tệp cấu hình để tự động hóa toàn bộ quá trình chạy tập lệnh này.
-
 ## Cấu trúc thư mục
 
-Phần này đang được để trống và sẽ bổ sung sau khi hoàn thiện kiến trúc dự án.
+Cấu trúc hiện tại của dự án được tổ chức như sau:
+
+```text
+/
+├── staging/
+│   ├── readme_1.1.md
+│   ├── schema_issue#1.sql
+│   ├── schema_issue#2.sql
+│   ├── schema_issue#3.sql
+│   └── schema_issue#4.sql
+├── 01_create_table.sql
+└── README.md
+```
+
+Thư mục staging dùng để chứa mã nguồn nháp độc lập của 4 thành viên, giúp phân tách không gian làm việc và tránh xung đột khi gộp mã. Tệp 01_create_table.sql là nơi tập hợp lược đồ cơ sở dữ liệu chính thức sau khi nhóm đã kiểm duyệt.
+
+## Quy trình khởi tạo Cơ sở dữ liệu
+
+Để thiết lập và chạy thử cơ sở dữ liệu trên máy tính cá nhân, vui lòng thực hiện tuần tự các bước sau:
+
+1. Mở phần mềm SQL Server Management Studio và đăng nhập vào máy chủ cục bộ.
+2. Tạo một cơ sở dữ liệu trống hoàn toàn mới.
+3. Mở các tệp lệnh SQL trong kho lưu trữ bằng SQL Server Management Studio.
+4. Thực thi các tệp lệnh tuần tự theo đúng số thứ tự tiền tố của tên tệp từ 01 trở đi.
 
 ## Cấu hình môi trường
 
-Phần này đang được để trống và sẽ cập nhật danh sách các biến môi trường cần thiết ở giai đoạn tích hợp hệ thống.
+Phần này đang được để trống và sẽ cập nhật danh sách các biến môi trường cần thiết ở giai đoạn code web application.
+
+## Quy trình cài đặt ứng dụng
+
+Phần này đang được để trống và sẽ bổ sung hướng dẫn cài đặt chi tiết máy chủ Node.js và giao diện React sau khi hoàn thiện mã nguồn.
 
 ## Điểm nhấn kỹ thuật
 
