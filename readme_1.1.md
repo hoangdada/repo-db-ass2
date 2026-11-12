@@ -5,6 +5,7 @@ Tài liệu này hệ thống hóa các điểm khác biệt giữa **Slide lý 
 ## PHẦN 1: QUY TẮC KHỞI TẠO DATABASE & SCHEMA
 
 * **Phân công:** Chỉ **1 người (Hoàng)** viết lệnh khởi tạo Database và Schema ở đầu file `01_schema_init.sql`. Các thành viên khác chỉ viết lệnh `CREATE TABLE` cho cụm bảng của mình.
+  * **Vị trí file làm việc**: trong folder `staging`, mỗi người làm việc trong file tương ứng với issue mà mình đã nhận
 
 * **Không dùng `AUTHORIZATION`:** Trong slide lý thuyết (trang 8) có cú pháp `CREATE SCHEMA ... AUTHORIZATION ...`. Trong bài tập lớn này, chúng ta chạy trên quyền quản trị cao nhất ở máy local và dùng chung schema mặc định `dbo`, nên bỏ qua phần phân quyền `AUTHORIZATION` vì nằm ngoài phạm vi chấm điểm.
 

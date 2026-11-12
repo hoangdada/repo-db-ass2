@@ -1,1 +1,1 @@
--- hello testing 101
+-- file này sẽ tổng hợp toàn bộ workload của folder staging
