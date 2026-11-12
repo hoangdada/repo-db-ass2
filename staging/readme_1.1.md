@@ -166,7 +166,7 @@ Khi viết `CHECK`, các thành viên bắt buộc phải nắm rõ 3 quy tắc 
 
 * \[ \] Cột lưu điểm/tỷ lệ đã dùng `DECIMAL(p, s)` thay vì `FLOAT` chưa?
 
-* \[ \] Cột lưu ngày giờ đã dùng `DATE` / `TIME(0)` / `DATETIME2(0)` (và né hoàn toàn từ khóa `TIMESTAMP`) chưa?
+* \[ \] Cột lưu ngày giờ đã dùng `DATE` / `TIME` / `DATETIME2` (và né hoàn toàn từ khóa `TIMESTAMP`) chưa?
 
 * \[ \] Đã rà soát từng cột để quyết định `NOT NULL` hay `NULL` chưa? (Nhớ quy tắc 3-Valued Logic: Cột nào bắt buộc phải có dữ liệu khi tạo mới thì phải ghi rõ `NOT NULL`).
 
