@@ -10,7 +10,7 @@ USE bk_db_ass2;
 GO
 
 CREATE TABLE Attempt (
-	Student_Email VARCHAR(254) NOT NULL,
+	Student_ID SMALLINT NOT NULL,
 	Quiz_ID SMALLINT NOT NULL,
 	Start_time DATETIME2 NOT NULL,
 	Score DECIMAL(4,2) NULL, 
