@@ -11,7 +11,7 @@ GO
 
 
 CREATE TABLE Submission (
-    ID SMALLINT NOT NULL,
+    ID SMALLINT IDENTITY(1,1) NOT NULL,
     Assignment_ID SMALLINT NOT NULL,
     Student_ID SMALLINT NOT NULL,
     Title NVARCHAR(250) NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE Peer_review (
 	Comment NVARCHAR(1500) NOT NULL,
 
 	CONSTRAINT PK_Peer_review
-		PRIMARY KEY (Submission_ID_review, Submission_ID, Assignment_ID, Student_ID_submit),
+		PRIMARY KEY (Student_ID_review, Submission_ID, Assignment_ID, Student_ID_submit),
 	CONSTRAINT FK_Peer_review_Student
 		FOREIGN KEY (Student_ID_review) REFERENCES Student (ID)
 			ON DELETE NO ACTION,
@@ -91,7 +91,7 @@ CREATE TABLE Peer_review (
 			ON DELETE NO ACTION,
 
 	CONSTRAINT CK_Peer_review_distinguish_student
-		CHECK (Submission_ID_review != Student_ID_submit)
+		CHECK (Student_ID_review != Student_ID_submit)
 );
 GO
 
