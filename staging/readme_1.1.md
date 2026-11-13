@@ -69,7 +69,7 @@ Khi chọn kiểu dữ liệu, cần đảm bảo tối ưu bộ nhớ và phả
 
   * Chỉ lưu giờ trong ngày (ví dụ: `Start_time` của lịch học hàng tuần): Dùng `TIME(0)` (`HH:MM:SS`).
 
-  * Lưu cả ngày và giờ (ví dụ: `Deadline`, `Submit_time`, `Upload_time`, `Start_time` của lần làm bài Quiz): Dùng `DATETIME2(0)` (chuẩn mới của Microsoft, chính xác và tốn ít bộ nhớ hơn `DATETIME` cũ). Nếu cần quản lý đa múi giờ theo chuẩn UTC thì dùng `DATETIMEOFFSET`.
+  * Lưu cả ngày và giờ (ví dụ: `Deadline`, `Submit_time`, `Upload_time`, `Start_time` của lần làm bài Quiz): Dùng `DATETIME2` (chuẩn mới của Microsoft, chính xác và tốn ít bộ nhớ hơn `DATETIME` cũ). Nếu cần quản lý đa múi giờ theo chuẩn UTC thì dùng `DATETIMEOFFSET`.
 
 ## PHẦN 3: TÁI SỬ DỤNG KIỂU DỮ LIỆU (`CREATE DOMAIN` vs `CREATE TYPE`)
 
@@ -166,11 +166,11 @@ Khi viết `CHECK`, các thành viên bắt buộc phải nắm rõ 3 quy tắc 
 
 * \[ \] Cột lưu điểm/tỷ lệ đã dùng `DECIMAL(p, s)` thay vì `FLOAT` chưa?
 
-* \[ \] Cột lưu ngày giờ đã dùng `DATE` / `TIME(0)` / `DATETIME2(0)` (và né hoàn toàn từ khóa `TIMESTAMP`) chưa?
+* \[ \] Cột lưu ngày giờ đã dùng `DATE` / `TIME` / `DATETIME2` (và né hoàn toàn từ khóa `TIMESTAMP`) chưa?
 
 * \[ \] Đã rà soát từng cột để quyết định `NOT NULL` hay `NULL` chưa? (Nhớ quy tắc 3-Valued Logic: Cột nào bắt buộc phải có dữ liệu khi tạo mới thì phải ghi rõ `NOT NULL`).
 
-* \[ \] Các thuộc tính dẫn xuất (Derived Attributes từ EERD như `Total_Credits`, `Review_Count`, `Final_Score`) đã được tạo thành cột vật lý kèm giá trị `DEFAULT 0` (cho bộ đếm) hoặc `DEFAULT NULL` (cho điểm chưa chấm) để chuẩn bị cho Trigger 2.2.2 chưa?
+* \[ \] Các thuộc tính dẫn xuất (Derived Attributes từ EERD như `Total_Credits`, `Review_Count`, `Final_Score`) đã được tạo thành cột vật lý kèm giá trị `DEFAULT 0` (cho bộ đếm) để chuẩn bị cho Trigger 2.2.2 chưa? (nếu là DEFAULT NULL thì khỏi cần)
 
 ### 3. Kiểm tra Khóa ngoại (Foreign Key Constraints)
 

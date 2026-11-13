@@ -1,6 +1,38 @@
 description for file schemas_issue#4.sql:
 
+============ Tổng thế ===============
+
+ON DELETE NO ACTION (Dùng để bảo vệ): 
+- Áp dụng cho các thực thể gốc, tồn tại độc lập (Người, Môn học, Bài tập) nhằm chặn đứng thảm họa vô tình xóa mất dữ liệu quan trọng.
+ON DELETE CASCADE (Dùng để dọn rác): 
+- Áp dụng cho các thực thể phụ hoặc bảng trung gian (File đính kèm, Bảng nối) để hệ thống tự động dọn sạch khi dữ liệu cha không còn.
+
+
+============ TABLE ===============
+
+
+Submission:
+
+- ID SMALLINT NOT NULL,
+	max 32000 id, phù hợp với scope asssigment
+- Assignement_ID SMALLINT NOT NULL,
+	max 32000 id
+- Student_ID SMALLINT NOT NULL,
+	max 32000 id
+- Title NVARCHAR(120) NOT NULL
+	lưu tiếng việt cho nên dùng NVARCHAR
+	max 120 kí tự
+	ví dụ 80 kí tự: 'Báo cáo Assignment 1 - Nhóm 5 - Lớp L01 - Môn Cơ sở dữ liệu - Phiên bản cuối cùng'
+- Submit_time DATETIME2(0) NOT NULL,
+	lưu ngày + giờ
+- Final_score DECIMAL(4,2) NULL,
+	[-99,99 ; 99,99] -> phù hợp với [0.00 ; 10.00] điểm
+	cho phép null vì submit xong thì phải chờ GV chấm
+
+
+
 Attempt:
+
 - Student_ID SMALLINT NOT NULL,
 	maxium 32.000 id, phù hợp với scope
 - Quiz_ID SMALLINT NOT NULL,
@@ -13,3 +45,24 @@ Attempt:
 - Duration INT NOT NULL
 	expect max là 24 tiếng = 86000 giây, nếu smallint max là 32000 nên ko đáp ứng đc
  	init ban đầu là 0, cứ 10 giây update 1 lần (i think so)
+
+
+
+Submission_file_url:
+
+- File_url VARCHAR(300) NOT NULL,
+	link gg drive max tầm 255 => nên 300 cho safe
+- CONSTRAINT FK_Submission_file_url_Submission ON DELETE CASCADE
+	entity yếu sẽ ko có ý nghĩa nếu thằng cha bị xóa -> CASCADE theo thằng cha lun
+
+
+
+Peer_review:
+
+- Reviewe_date DATETIME2 NOT NULL,
+	lưu ngày giờ
+- Comment NVARCHAR(1500) NOT NULL,
+	nvarchar vì ta cho type in tiếng việt
+	review trên coursera trog khoảng 1000-2000 kí tự => chọn 1500
+- CONSTRAINT CK_Peer_review_distinguish_student CHECK (Submission_ID_review != Student_ID_submit)
+	người 'đi review' và 'được review' phải khác nhau
