@@ -39,7 +39,7 @@ CREATE TABLE Attempt (
 	Quiz_ID SMALLINT NOT NULL,
 	Start_time DATETIME2 NOT NULL,
 	Score DECIMAL(4,2) NULL, 
-	Duration INT NOT NULL,
+	Duration INT NOT NULL CONSTRAINT DF_Attempt_Duration DEFAULT 0,
 
 	CONSTRAINT PK_Attempt
 		PRIMARY KEY (Student_ID, Quiz_ID, Start_time),
