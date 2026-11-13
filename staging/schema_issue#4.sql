@@ -73,3 +73,26 @@ CREATE TABLE Submission_file_url(
 GO
 
 
+CREATE TABLE Peer_review (
+	Student_ID_review SMALLINT NOT NULL,
+	Submission_ID SMALLINT NOT NULL,
+	Assignment_ID SMALLINT NOT NULL,
+	Student_ID_submit SMALLINT NOT NULL,
+	Review_date DATETIME2 NOT NULL,
+	Comment NVARCHAR(1500) NOT NULL,
+
+	CONSTRAINT PK_Peer_review
+		PRIMARY KEY (Submission_ID_review, Submission_ID, Assignment_ID, Student_ID_submit),
+	CONSTRAINT FK_Peer_review_Student
+		FOREIGN KEY (Student_ID_review) REFERENCES Student (ID)
+			ON DELETE NO ACTION,
+	CONSTRAINT FK_Peer_review_Submission
+		FOREIGN KEY (Submission_ID, Assignment_ID, Student_ID_submit) REFERENCES Submission (ID, Assignment_ID, Student_ID)
+			ON DELETE NO ACTION,
+
+	CONSTRAINT CK_Peer_review_distinguish_student
+		CHECK (Submission_ID_review != Student_ID_submit)
+);
+GO
+
+

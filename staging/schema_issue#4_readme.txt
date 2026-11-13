@@ -54,3 +54,15 @@ Submission_file_url:
 	link gg drive max tầm 255 => nên 300 cho safe
 - CONSTRAINT FK_Submission_file_url_Submission ON DELETE CASCADE
 	entity yếu sẽ ko có ý nghĩa nếu thằng cha bị xóa -> CASCADE theo thằng cha lun
+
+
+
+Peer_review:
+
+- Reviewe_date DATETIME2 NOT NULL,
+	lưu ngày giờ
+- Comment NVARCHAR(1500) NOT NULL,
+	nvarchar vì ta cho type in tiếng việt
+	review trên coursera trog khoảng 1000-2000 kí tự => chọn 1500
+- CONSTRAINT CK_Peer_review_distinguish_student CHECK (Submission_ID_review != Student_ID_submit)
+	người 'đi review' và 'được review' phải khác nhau
