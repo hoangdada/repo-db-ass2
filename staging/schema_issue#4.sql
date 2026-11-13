@@ -57,3 +57,19 @@ CREATE TABLE Attempt (
 );
 GO
 
+
+CREATE TABLE Submission_file_url(
+	Submission_ID SMALLINT NOT NULL,
+	Assignment_ID SMALLINT NOT NULL,
+	Student_ID SMALLINT NOT NULL,
+	File_url VARCHAR(300) NOT NULL,
+
+	CONSTRAINT PK_Submission_file_url
+		PRIMARY KEY (Submission_ID, Assignment_ID, Student_ID, File_url),
+	CONSTRAINT FK_Submission_file_url_Submission
+        FOREIGN KEY (Submission_ID, Assignment_ID, Student_ID) REFERENCES Submission(ID, Assignment_ID, Student_ID)
+        	ON DELETE CASCADE
+);
+GO
+
+

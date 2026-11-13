@@ -45,3 +45,12 @@ Attempt:
 - Duration INT NOT NULL
 	expect max là 24 tiếng = 86000 giây, nếu smallint max là 32000 nên ko đáp ứng đc
  	init ban đầu là 0, cứ 10 giây update 1 lần (i think so)
+
+
+
+Submission_file_url:
+
+- File_url VARCHAR(300) NOT NULL,
+	link gg drive max tầm 255 => nên 300 cho safe
+- CONSTRAINT FK_Submission_file_url_Submission ON DELETE CASCADE
+	entity yếu sẽ ko có ý nghĩa nếu thằng cha bị xóa -> CASCADE theo thằng cha lun
