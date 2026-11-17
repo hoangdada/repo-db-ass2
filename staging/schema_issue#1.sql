@@ -83,18 +83,18 @@ CREATE TABLE Teacher (
 );
 GO
 
--- Bảng tạm để test FK cho Weekly_Schedule (Nhớ xóa/comment lại trước khi merge vào file tổng)
-CREATE TABLE Session (
-    Course_Code         CHAR(6)         NOT NULL,
-    Semester            VARCHAR(10)     NOT NULL,
-    Education_Program   VARCHAR(10)     NOT NULL,
-    Number_Order        VARCHAR(10)     NOT NULL,
+-- Bảng tạm để test FK cho Weekly_Schedule
+--CREATE TABLE Session (
+--    Course_Code         CHAR(6)         NOT NULL,
+--    Semester            VARCHAR(10)     NOT NULL,
+--    Education_Program   VARCHAR(10)     NOT NULL,
+--    Number_Order        VARCHAR(10)     NOT NULL,
 
-    CONSTRAINT PK_Session PRIMARY KEY (
-        Course_Code, Semester, Education_Program, Number_Order
-    )
-);
-GO
+--    CONSTRAINT PK_Session PRIMARY KEY (
+--        Course_Code, Semester, Education_Program, Number_Order
+--    )
+--);
+--GO
 -- 5. Weekly_Schedule Table
 CREATE TABLE Weekly_Schedule (
     Course_Code         CHAR(6)         NOT NULL,
