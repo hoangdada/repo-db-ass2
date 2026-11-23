@@ -1,20 +1,22 @@
 description of issue#3:
 
+description of issue#3:
+
 Resource:
 
-1.	Enforcing Disjointness (Pure Constraints - No Triggers Needed)
-To guarantee that a Resource can never belong to more than one subclass (e.g., cannot be both a Quiz and an Assignment), add a Resource_Type discriminator column to Resource and include it in the Foreign Keys.
+1. Enforcing Disjointness (Handled via Insert Procedure for Now)
+Using Option 8A mapping (no Resource_Type discriminator column in Resource). Disjointness across Quiz, Assignment, and File_material is not enforced via constraints or triggers yet; the insert procedure will ensure each Resource ID is only inserted into one subclass.
 
 2. Enforcing Total Participation & Solving the Insert Order Problem
-"Chicken and egg problem" -> Solve by either adding a procedure or instead of trigger into a View.
+"Chicken and egg problem" -> Solve by adding a stored procedure (or INSTEAD OF trigger on a View) to insert into Resource, its subclass, Creates, and Includes within a single transaction.
 
-3. Subclass ON DELETE CASCADE: Ensure no Resource exist without a type.
+3. Subclass ON DELETE CASCADE: Deleting a Resource automatically deletes its corresponding subclass record (Quiz, Assignment, or File_material) so no orphaned subclass rows remain.
 
 Quiz:
 
-- Attempt_Limit must be >= 1
-- Quiz_Time_limit must be 0 < x <= 86400 (enforce theo attempt của Hoàng)
-- Grade_To_Pass DECIMAL(4, 2): 0.00 - 10.00
+- Attempt_Limit must be >= 1 (NULL allowed if unlimited)
+- Time_limit must be 0 < x <= 86400, DEFAULT 86400 NOT NULL (enforce theo attempt của Hoàng)
+- Grade_To_Pass DECIMAL(4, 2) DEFAULT 0.00 NOT NULL: 0.00 - 10.00
 
 Assignment:
 
