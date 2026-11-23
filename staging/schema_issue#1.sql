@@ -33,7 +33,7 @@ CREATE TABLE Person (
     Middle_Name     NVARCHAR(50)    NULL,
     Last_Name       NVARCHAR(50)    NOT NULL,
     Specialty       NVARCHAR(100)   NOT NULL,
-    Country         NVARCHAR(10)    NOT NULL CONSTRAINT DF_Person_Country DEFAULT N'Việt Nam',
+    Country         NVARCHAR(64)    NOT NULL CONSTRAINT DF_Person_Country DEFAULT N'Việt Nam',
     Birthday        DATE            NOT NULL,
     Department_ID   SMALLINT        NOT NULL,
 
@@ -59,14 +59,12 @@ GO
 CREATE TABLE Student (
     ID              SMALLINT    NOT NULL,
     Academic_Year   SMALLINT    NOT NULL, -- Chọn SMALLINT cho tiết kiệm bộ nhớ
-    Total_Credits   INT         NOT NULL CONSTRAINT DF_Student_Total_Credits DEFAULT 0,
 
     CONSTRAINT PK_Student PRIMARY KEY (ID),
     CONSTRAINT FK_Student_Person FOREIGN KEY (ID)
         REFERENCES Person(ID)
         ON DELETE NO ACTION,
     CONSTRAINT CK_Student_Academic_Year CHECK (Academic_Year >= 1957 AND Academic_Year <= YEAR(GETDATE())), -- Từ năm thành lập đến năm hiện tại
-    CONSTRAINT CK_Student_Total_Credits CHECK (Total_Credits >= 0)
 );
 GO
 
@@ -107,7 +105,7 @@ CREATE TABLE Weekly_Schedule (
     Classroom           VARCHAR(20)     NOT NULL,
 
     CONSTRAINT PK_Weekly_Schedule PRIMARY KEY (
-        Course_Code, Semester, Education_Program, Number_Order, Day, Start_time
+        Course_Code, Semester, Education_Program, Number_Order, Day, Start_time, Duration, Classroom
     ),
     CONSTRAINT FK_Weekly_Schedule_Session FOREIGN KEY (
         Course_Code, Semester, Education_Program, Number_Order
