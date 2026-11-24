@@ -16,30 +16,56 @@ Báo cáo thiết kế cơ sở dữ liệu Assignment 1: [Bản xem trước tr
 
 ## Cấu trúc thư mục
 
-Cấu trúc hiện tại của dự án được tổ chức như sau:
+Kho lưu trữ hiện có các tệp và thư mục sau:
 
 ```text
 /
+├── scripts/
+│   └── reset_db.ps1
 ├── staging/
-│   ├── readme_1.1.md
-│   ├── schema_issue#1.sql
-│   ├── schema_issue#2.sql
-│   ├── schema_issue#3.sql
-│   └── schema_issue#4.sql
+├── staging_2.1/
 ├── 01_create_table.sql
-└── README.md
+├── 02_seed_data_1.2.sql
+├── README.md
+└── reset_db.bat
 ```
 
-Thư mục staging dùng để chứa mã nguồn nháp độc lập của 4 thành viên, giúp phân tách không gian làm việc và tránh xung đột khi gộp mã. Tệp 01_create_table.sql là nơi tập hợp lược đồ cơ sở dữ liệu chính thức sau khi nhóm đã kiểm duyệt.
+* `01_create_table.sql` tạo cơ sở dữ liệu `bk_db_ass2` và toàn bộ lược đồ bảng chính thức sau khi nhóm kiểm duyệt.
+* `02_seed_data_1.2.sql` nạp dữ liệu mẫu cho `bk_db_ass2`.
+* `reset_db.bat` và `scripts/reset_db.ps1` xóa sạch và khởi tạo lại `bk_db_ass2` trên Windows mà không cần chỉnh đường dẫn.
+* `staging/` và `staging_2.1/` chứa mã nguồn nháp độc lập của từng thành viên cho các giai đoạn 1.1 và 2.1 để tránh xung đột khi gộp mã.
 
-## Quy trình khởi tạo Cơ sở dữ liệu
+## Quy trình khởi tạo và reset cơ sở dữ liệu
 
-Để thiết lập và chạy thử cơ sở dữ liệu trên máy tính cá nhân, vui lòng thực hiện tuần tự các bước sau:
+Bạn có thể dựng mới hoặc làm sạch `bk_db_ass2` bằng một trong hai cách dưới đây.
 
-1. Mở phần mềm SQL Server Management Studio và đăng nhập vào máy chủ cục bộ.
-2. Tạo một cơ sở dữ liệu trống hoàn toàn mới.
-3. Mở các tệp lệnh SQL trong kho lưu trữ bằng SQL Server Management Studio.
-4. Thực thi các tệp lệnh tuần tự theo đúng số thứ tự tiền tố của tên tệp từ 01 trở đi.
+### Cách 1. Chạy tự động bằng reset_db.bat (khuyên dùng)
+
+Tập lệnh `reset_db.bat` tự phát hiện instance SQL Server cục bộ (`localhost` hoặc `.\SQLEXPRESS`), xóa sạch cơ sở dữ liệu `bk_db_ass2` cũ kể cả khi bảng hoặc dữ liệu đang lỗi, rồi chạy tuần tự mọi tệp `01_*.sql`, `02_*.sql` ở thư mục gốc theo đúng thứ tự số.
+
+1. Nhấp đúp tệp `reset_db.bat` ở thư mục gốc của kho lưu trữ. Nếu chạy từ PowerShell hoặc Command Prompt, thực thi lệnh:
+
+```powershell
+.\reset_db.bat
+```
+
+2. Nếu máy dùng SQL Server Express hoặc một named instance riêng, truyền tên instance qua tham số `-Server`:
+
+```powershell
+.\reset_db.bat -Server ".\SQLEXPRESS"
+```
+
+3. Kiểm tra bảng thống kê số dòng của từng bảng được in ra khi hoàn tất.
+4. Mở SQL Server Management Studio (SSMS) và bấm **Refresh** trên `bk_db_ass2` để xem cấu trúc và dữ liệu mới.
+
+### Cách 2. Chạy thủ công trong SSMS
+
+Dùng cách này khi bạn muốn chạy trực tiếp từng tệp lệnh trong SQL Server Management Studio.
+
+1. Mở SSMS và kết nối tới máy chủ SQL Server cục bộ.
+2. Mở tệp `01_create_table.sql` và nhấn **Execute (F5)**. Tệp này tự tạo `bk_db_ass2` nếu cơ sở dữ liệu chưa tồn tại.
+3. Mở tệp `02_seed_data_1.2.sql` và nhấn **Execute (F5)**.
+4. Nếu kho lưu trữ có thêm các tệp lệnh đánh số tiếp theo (`03_*.sql`, `04_*.sql`), mở và nhấn **Execute (F5)** theo đúng thứ tự tăng dần.
 
 ## Cấu hình môi trường
 
