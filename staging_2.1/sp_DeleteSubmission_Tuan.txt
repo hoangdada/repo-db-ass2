@@ -1,0 +1,42 @@
+Description: DELETE Submission (sp_DeleteSubmission)
+
+1. KHI NÀO ĐƯỢC PHÉP XÓA VÀ KHI NÀO KHÔNG ĐƯỢC PHÉP XÓA
+
+a) Trường hợp ĐƯỢC PHÉP xóa:
+
+Một bản ghi trong bảng Submission chỉ được phép xóa khi thỏa mãn ĐỒNG THỜI tất cả các điều kiện sau:
+
+- Bản ghi bài nộp tồn tại trong bảng Submission theo đúng khóa chính tổ hợp (ID, Assignment_ID, Student_ID).
+
+- Bài nộp chưa được chấm điểm (cột Final_Score mang giá trị NULL).
+
+- Bài nộp chưa phát sinh bất kỳ bản ghi đánh giá chéo nào từ sinh viên khác trong bảng Peer_review.
+
+
+Khi xóa thành công bản ghi Submission hợp lệ, hệ quản trị cơ sở dữ liệu sẽ tự động xóa đường dẫn tệp đính kèm trong bảng Submission_file_url qua ràng buộc khóa ngoại ON DELETE CASCADE.
+
+b) Trường hợp KHÔNG ĐƯỢC PHÉP xóa:
+
+Hệ thống sẽ chặn thao tác xóa và trả về thông báo lỗi cụ thể (RAISERROR) nếu rơi vào một trong các trường hợp sau:
+
+- Bản ghi không tồn tại: Không tìm thấy bài nộp khớp với (ID, Assignment_ID, Student_ID) được cung cấp.
+
+- Bài nộp đã có điểm (Final_Score IS NOT NULL): Bài làm đã hoàn tất quá trình chấm điểm của giảng viên/hệ thống, không được phép hủy bỏ để tránh sai lệch kết quả học tập.
+
+- Bài nộp đã có đánh giá chéo (tồn tại bản ghi trong Peer_review): Bài làm đã tham gia vào quy trình phản biện/đánh giá của sinh viên khác, việc xóa sẽ làm mất dữ liệu lịch sử đánh giá và vi phạm ràng buộc toàn vẹn tham chiếu (ON DELETE NO ACTION trên bảng Peer_review).
+
+2. MỤC ĐÍCH CỦA VIỆC XÓA VÀ LÝ DO THAO TÁC NÀY CẦN THIẾT
+
+a) Mục đích của việc xóa:
+
+- Cho phép sinh viên hoặc quản trị viên thu hồi các bài nộp nhầm, nộp sai tệp tin, nộp nhầm bài tập hoặc bài nộp bị lỗi kỹ thuật trước khi bước vào giai đoạn chấm điểm và đánh giá chéo.
+
+- Dọn dẹp dữ liệu rác và các liên kết tệp không còn sử dụng trong bảng Submission_file_url nhờ cơ chế ON DELETE CASCADE.
+
+- Cho phép sinh viên nộp lại bản hoàn chỉnh mới (vì bảng Submission có ràng buộc UNIQUE trên cặp (Assignment_ID, Student_ID), mỗi sinh viên chỉ có một bản ghi bài nộp cho mỗi bài tập).
+
+b) Lý do thao tác này cần thiết (và cần kiểm soát chặt chẽ):
+
+- Đáp ứng nhu cầu thực tế trong hệ thống quản lý học tập (LMS): Trong quá trình làm bài trước hạn chót, sai sót khi tải tệp lên là rất phổ biến, nếu không có chức năng xóa bài nộp hợp lệ, người dùng không thể nộp lại do ràng buộc UQ_Submission_Assignment_Student.
+
+- Bảo vệ tính toàn vẹn dữ liệu và tính minh bạch học thuật: Việc đóng gói logic kiểm tra vào Stored Procedure (sp_DeleteSubmission) đảm bảo không ai có thể xóa bài đã có điểm hoặc đã qua đánh giá chéo, ngăn chặn gian lận điểm số và tránh lỗi vi phạm khóa ngoại đột ngột từ tầng cơ sở dữ liệu.
