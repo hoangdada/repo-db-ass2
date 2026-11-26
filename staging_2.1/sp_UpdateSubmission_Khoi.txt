@@ -1,0 +1,63 @@
+================================================================================
+QUY TẮC & DANH SÁCH LỖI: sp_UpdateSubmission
+================================================================================
+
+1. QUY TẮC CHO PHÉP / TỪ CHỐI CHỈNH SỬA BÀI NỘP (SUBMISSION)
+--------------------------------------------------------------------------------
+A. Điều kiện CHO PHÉP chỉnh sửa (Phải thỏa mãn đồng thời tất cả điều kiện):
+   1. Cho phép cập nhật sau hạn chót (Deadline): Sinh viên vẫn được phép chỉnh
+      sửa bài nộp ngay cả khi đã qua mốc Assignment.Deadline.
+   2. Thời gian nộp (Submit_Time) sẽ được tự động cập nhật lại bằng thời điểm
+      hiện tại của hệ thống (SYSDATETIME()).
+
+B. Điều kiện TỪ CHỐI chỉnh sửa (Hệ thống ngắt thủ tục và báo lỗi):
+   1. Thiếu một hoặc nhiều khóa định danh (@Submission_ID, @Assignment_ID hoặc
+      @Student_ID nhận giá trị NULL).
+   2. Không tìm thấy bản ghi Submission phù hợp (do sai mã bài nộp, sai mã bài
+      tập, hoặc sinh viên cố tình sửa bài nộp của sinh viên khác).
+   3. Bài nộp đã được giảng viên chấm điểm (Final_Score IS NOT NULL) -> Khóa
+      chỉnh sửa để bảo toàn tính toàn vẹn của điểm số đã chấm.
+   4. Tiêu đề mới (@New_title) bị NULL, chuỗi rỗng '' hoặc chỉ chứa toàn ký tự
+      khoảng trắng.
+
+C. Quy tắc đánh giá trạng thái hạn nộp sau khi cập nhật:
+   Sau khi cập nhật thành công Title và Submit_Time (= @CurrentTime), thủ tục
+   đối chiếu @CurrentTime với cột Deadline trong bảng Assignment:
+   - Nếu @CurrentTime <= Assignment.Deadline:
+     -> Trạng thái ĐÚNG HẠN / NỘP SỚM: In thông báo
+        "Submit early by <số phút> minute(s)."
+   - Nếu @CurrentTime > Assignment.Deadline:
+     -> Trạng thái TRỄ HẠN: In thông báo
+        "Submit late by <số phút> minute(s)."
+
+
+2. DANH SÁCH THÔNG BÁO LỖI (RAISERROR - SEVERITY 16, STATE 1)
+--------------------------------------------------------------------------------
+1. Lỗi thiếu tham số khóa định danh
+   - Thông báo lỗi : Submission_ID, Assignment_ID, Student_ID can not be NULL
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Một trong ba tham số @Submission_ID, @Assignment_ID hoặc
+                      @Student_ID được truyền giá trị NULL khi gọi thủ tục.
+
+2. Lỗi không tìm thấy bài nộp hoặc sai quyền sở hữu
+   - Thông báo lỗi  : Submission does not exist
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Không có dòng nào trong bảng Submission khớp đồng thời
+                      với bộ ba (@Submission_ID, @Assignment_ID, @Student_ID).
+                      Xảy ra khi ID bài nộp không tồn tại, bài nộp không thuộc
+                      Assignment_ID truyền vào, hoặc Student_ID không phải là
+                      chủ sở hữu của bài nộp này.
+
+3. Lỗi bài nộp đã được chấm điểm
+   - Thông báo lỗi  : Can not update graded Submission
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Cột Final_Score của bài nộp đã có giá trị điểm số
+                      (Final_Score IS NOT NULL), hệ thống khóa thao tác sửa.
+
+4. Lỗi tiêu đề mới không hợp lệ
+   - Thông báo lỗi  : Invalid new title
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Tham số @New_title truyền vào là NULL, chuỗi rỗng ('')
+                      hoặc chỉ bao gồm các khoảng trắng (vi phạm ràng buộc
+                      CK_Submission_Title: LEN(LTRIM(RTRIM(Title))) > 0).
+================================================================================
