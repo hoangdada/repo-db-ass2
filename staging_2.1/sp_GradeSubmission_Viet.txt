@@ -1,0 +1,131 @@
+================================================================================
+TÀI LIỆU MÔ TẢ THỦ TỤC LƯU TRỮ: sp_GradeSubmission
+File SQL: staging_2.1/sp_GradeSubmission_Viet.sql
+================================================================================
+
+1. MỤC ĐÍCH & THAM SỐ ĐẦU VÀO
+--------------------------------------------------------------------------------
+Danh sách tham số đầu vào:
+- @Submission_ID  (SMALLINT)      : ID tự tăng của bài nộp.
+- @Assignment_ID  (SMALLINT)      : ID của Assignment chứa bài nộp.
+- @Student_ID     (SMALLINT)      : ID của sinh viên đã nộp bài.
+- @Final_Score    (DECIMAL(4, 2)) : Điểm tổng kết giảng viên chấm (thang 0-10).
+
+Lưu ý nghiệp vụ cập nhật lại điểm:
+- Thủ tục cho phép Giảng viên cập nhật lại `Final_Score` ngay cả khi bài nộp đã
+  từng được chấm trước đó (phục vụ phúc khảo hoặc điều chỉnh điểm thành phần),
+  miễn là thỏa mãn đầy đủ các điều kiện kiểm tra bên dưới.
+
+2. GIẢI THÍCH CÁC ĐIỀU KIỆN CHẤM ĐIỂM (DATA VALIDATION FLOW)
+--------------------------------------------------------------------------------
+Thủ tục kiểm tra tuần tự (kiểm tra đầu vào trước khi truy vấn bảng) qua 6 bước:
+
+- Bước 1 (Kiểm tra NULL khóa chính):
+  Các tham số `@Submission_ID`, `@Assignment_ID`, `@Student_ID` dùng để xác định
+  duy nhất 1 bản ghi trong `Submission` (PK tổ hợp 3 cột) nên không được NULL.
+
+- Bước 2 (Kiểm tra NULL điểm số):
+  Do cơ chế Logic 3 giá trị (3-Valued Logic) trong MS SQL Server, phép so sánh
+  `NULL < 0 OR NULL > 10` trả về UNKNOWN (không kích hoạt điều kiện IF). Vì vậy
+  phải chặn riêng `@Final_Score IS NULL` để đảm bảo mục đích chấm điểm.
+
+- Bước 3 (Kiểm tra miền giá trị điểm số [0.00, 10.00]):
+  Đồng bộ với ràng buộc `CK_Submission_Final_score` trên bảng `Submission`, đảm
+  bảo điểm nhập vào không âm và không vượt quá thang điểm 10.00.
+
+- Bước 4 (Kiểm tra tồn tại bài nộp):
+  Truy vấn bảng `Submission` theo đúng bộ 3 khóa chính `(ID, Assignment_ID,
+  Student_ID)` để đảm bảo bài nộp thực sự tồn tại trong hệ thống.
+
+- Bước 5 (Kiểm tra thời điểm chấm điểm sau Assignment.Deadline):
+  Lấy thời gian hiện tại của hệ thống bằng `SYSDATETIME()` và đối chiếu với cột
+  `Assignment.Deadline`. Yêu cầu bắt buộc: `SYSDATETIME() > Assignment.Deadline`.
+  * Lý do nghiệp vụ:
+    (1) Trước khi hết hạn Deadline, sinh viên vẫn có quyền chỉnh sửa/cập nhật
+        lại bài nộp (thông qua `sp_UpdateSubmission`).
+    (2) Theo đặc tả Assignment 1, tính năng chấm chéo (`Peer_review`) chỉ được
+        mở sau khi hết hạn nộp bài, nên Giảng viên chỉ được chấm điểm sau
+        Deadline để có đầy đủ dữ liệu tham khảo từ quá trình chấm chéo.
+
+- Bước 6 (Kiểm tra điều kiện hoàn thành Peer-review):
+  Đếm số lượt sinh viên nộp bài đã đi chấm chéo cho bạn bè và đối chiếu với
+  `Assignment.Number_Of_Review_Require` (chi tiết tại Mục 3 bên dưới).
+
+- Bước 7 (Cập nhật dữ liệu an toàn):
+  Thực thi lệnh `UPDATE Submission` bên trong khối `BEGIN TRY ... END TRY` và
+  `BEGIN CATCH` để bắt các lỗi hệ thống/Trigger phát sinh (nếu có) và thông báo
+  lỗi rõ ràng.
+
+3. GIẢI THÍCH LOGIC ĐỐI CHIẾU LƯỢT PEER-REVIEW
+--------------------------------------------------------------------------------
+Theo ràng buộc "Review quantity requirement" (Assignment 1, mục 1.3):
+"A Student must complete the required number of peer reviews in order to receive
+a grade from the Teacher."
+
+Trong bảng `Peer_review(Student_ID_Review, Submission_ID, Assignment_ID,
+Student_ID_Submit, Review_Date, Comment)` cần phân biệt rõ 2 vai trò:
+- `Student_ID_Review` : Sinh viên thực hiện việc đi chấm bài cho người khác.
+- `Student_ID_Submit` : Sinh viên là chủ nhân của bài nộp được người khác chấm.
+
+Logic đối chiếu đúng trong thủ tục:
+```sql
+SELECT @CompletedReviews = COUNT(*)
+FROM Peer_review AS PR
+WHERE PR.Student_ID_Review = @Student_ID
+  AND PR.Assignment_ID = @Assignment_ID;
+```
+
+4. DANH SÁCH THÔNG BÁO LỖI (RAISERROR)
+--------------------------------------------------------------------------------
+Tất cả thông báo dưới đây được phát sinh với Severity 16, State 1.
+
+1. Thiếu tham số định danh
+   - Thông báo lỗi : Submission_ID, Assignment_ID, and Student_ID cannot be NULL
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Một hoặc nhiều tham số @Submission_ID, @Assignment_ID,
+                      @Student_ID nhận giá trị NULL khi gọi thủ tục.
+
+2. Điểm chấm bị NULL
+   - Thông báo lỗi : Final_Score cannot be NULL when grading a submission
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Tham số @Final_Score nhận giá trị NULL; thủ tục yêu cầu
+                      phải có điểm khi thực hiện chấm bài.
+
+3. Điểm chấm nằm ngoài phạm vi hợp lệ
+   - Thông báo lỗi : Final_Score must be between 0.00 and 10.00
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : @Final_Score nhỏ hơn 0.00 hoặc lớn hơn 10.00.
+
+4. Không tìm thấy bài nộp phù hợp
+   - Thông báo lỗi : No submission was found matching the provided ID,
+                     Assignment_ID, and Student_ID
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Không có bản ghi trong Submission khớp đồng thời với
+                      @Submission_ID, @Assignment_ID và @Student_ID.
+
+5. Chưa đến thời điểm được chấm điểm
+   - Thông báo lỗi : The assignment cannot be graded until its deadline has passed
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Thời điểm hiện tại nhỏ hơn hoặc bằng Assignment.Deadline;
+                      chỉ được chấm sau khi Deadline đã qua.
+
+6. Chưa hoàn thành đủ lượt chấm chéo
+   - Thông báo lỗi : Student (ID = %d) has completed only %d/%d required peer
+                     reviews for this assignment and is not yet eligible to
+                     receive a grade
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Sinh viên có ID @Student_ID đã hoàn thành ít lượt chấm
+                      chéo hơn số lượt yêu cầu trong
+                      Assignment.Number_Of_Review_Require. Các giá trị %d lần
+                      lượt hiển thị lần lượt là Student_ID, số lượt đã hoàn
+                      thành và số lượt được yêu cầu.
+
+7. Lỗi hệ thống khi cập nhật điểm
+   - Thông báo lỗi : A system error occurred while updating the submission
+                     grade: %s
+   - Mức độ / State : Severity 16, State 1
+   - Nguyên nhân    : Có lỗi phát sinh trong quá trình UPDATE Submission (ví dụ:
+                      lỗi từ trigger hoặc ràng buộc dữ liệu). %s được thay bằng
+                      nội dung lỗi gốc do SQL Server trả về.
+--------------------------------------------------------------------------------
+
