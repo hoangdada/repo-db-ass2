@@ -1,0 +1,89 @@
+# Tài liệu thủ tục `[dbo].[sp_InsertSubmission]`
+
+## 1. Mục đích và chữ ký tham số
+
+Thủ tục `[dbo].[sp_InsertSubmission]` ghi nhận bài nộp mới hoặc thay thế bài nộp cũ của một sinh viên cho một bài tập trong cơ sở dữ liệu `bk_db_ass2`. Thủ tục kiểm tra toàn bộ điều kiện đầu vào và quy tắc nghiệp vụ trước khi mở giao dịch, sau đó ghi dữ liệu vào bảng `Submission` và bảng `Submission_file_url` trong một giao dịch nguyên tử.
+
+Chữ ký tham số của thủ tục:
+
+```sql
+CREATE OR ALTER PROCEDURE [dbo].[sp_InsertSubmission]
+    @Assignment_ID  SMALLINT,
+    @Student_ID     SMALLINT,
+    @Title          NVARCHAR(250),
+    @Submit_Time    DATETIME2 = NULL,
+    @File_Url       VARCHAR(300) = NULL
+```
+
+Chi tiết từng tham số:
+
+| Tham số | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+|---|---|---|---|---|
+| `@Assignment_ID` | `SMALLINT` | Có | Không có | Mã định danh bài tập trong bảng `Assignment`, phải lớn hơn `0`. |
+| `@Student_ID` | `SMALLINT` | Có | Không có | Mã định danh sinh viên trong bảng `Student`, phải lớn hơn `0`. |
+| `@Title` | `NVARCHAR(250)` | Có | Không có | Tiêu đề bài nộp. Thủ tục tự loại bỏ khoảng trắng thừa ở hai đầu sau khi kiểm tra hợp lệ. |
+| `@Submit_Time` | `DATETIME2` | Không | `NULL` | Thời điểm nộp bài. Khi truyền `NULL`, thủ tục gán bằng `SYSDATETIME()`. |
+| `@File_Url` | `VARCHAR(300)` | Không | `NULL` | Đường dẫn tệp đính kèm. Khi truyền `NULL`, thủ tục bỏ qua bước chèn vào `Submission_file_url`. Khi khác `NULL`, giá trị phải khác rỗng và bắt đầu bằng `http://` hoặc `https://`. |
+
+Kết quả trả về khi thực thi thành công gồm 1 dòng với 6 cột: `Submission_ID`, `Assignment_ID`, `Student_ID`, `Title`, `Submit_Time`, `Submission_Status`.
+
+## 2. Luồng nghiệp vụ 4 tầng
+
+Thủ tục bật `SET NOCOUNT ON` và `SET XACT_ABORT ON` ngay khi bắt đầu. Ba tầng kiểm tra đầu tiên chạy trước `BEGIN TRANSACTION` để trả lỗi ngay khi dữ liệu không hợp lệ và không giữ khóa trên cơ sở dữ liệu.
+
+### Tầng 1. Kiểm tra tính hợp lệ của tham số đầu vào
+
+Tầng này không truy vấn cơ sở dữ liệu và kiểm tra tuần tự 5 điều kiện sau:
+
+1. Kiểm tra `@Assignment_ID` không được `NULL` và phải lớn hơn `0` (State `1`).
+2. Kiểm tra `@Student_ID` không được `NULL` và phải lớn hơn `0` (State `2`).
+3. Kiểm tra `@Title` không được `NULL` và không chỉ chứa khoảng trắng (State `3`). Nếu hợp lệ, thủ tục chuẩn hóa `@Title = LTRIM(RTRIM(@Title))`.
+4. Kiểm tra `@File_Url` nếu khác `NULL` thì không được là chuỗi rỗng hoặc toàn khoảng trắng (State `4`). Nếu hợp lệ và khác `NULL`, thủ tục chuẩn hóa `@File_Url = LTRIM(RTRIM(@File_Url))`.
+5. Kiểm tra `@File_Url` sau khi chuẩn hóa phải bắt đầu bằng `http://` hoặc `https://` nếu giá trị khác `NULL` (State `5`).
+
+Sau khi vượt qua 5 kiểm tra trên, thủ tục chuẩn hóa thời điểm nộp bằng `SET @Submit_Time = ISNULL(@Submit_Time, SYSDATETIME())`.
+
+### Tầng 2. Kiểm tra sự tồn tại của thực thể cha
+
+Tầng này xác minh khóa ngoại trước khi ghi để người gọi nhận thông báo rõ ràng thay vì lỗi khóa ngoại thô của SQL Server:
+
+1. Kiểm tra sự tồn tại của `@Student_ID` trong `[dbo].[Student]` (State `6`). Kiểm tra này cũng loại trừ trường hợp truyền nhầm `ID` của giảng viên trong `Person`.
+2. Truy vấn đồng thời `Resource.Open_Date` và `Assignment.Deadline` thông qua phép nối `INNER JOIN` giữa `[dbo].[Assignment]` và `[dbo].[Resource]` theo `ID = @Assignment_ID`. Vì `Assignment.Deadline` có ràng buộc `NOT NULL`, nếu `@Deadline IS NULL` thì bài tập không tồn tại hoặc mã thuộc loại tài nguyên khác như `Quiz` hay `File_material` (State `7`).
+
+### Tầng 3. Kiểm tra quy tắc nghiệp vụ liên bảng và thời gian
+
+Tầng này xác minh quyền nộp bài và tính hợp lệ về thời điểm nộp:
+
+1. Nối `[dbo].[Enrolls]` và `[dbo].[Includes]` trên đủ 4 cột khóa chính của `Session` gồm `Course_Code`, `Semester`, `Education_Program`, `Number_Order` với điều kiện `e.Student_ID = @Student_ID` và `i.Resource_ID = @Assignment_ID`. Nếu không tồn tại bản ghi khớp, sinh viên chưa đăng ký lớp học phần chứa bài tập đó (State `8`).
+2. So sánh `CAST(@Submit_Time AS DATE) < @Open_Date`. Nếu thời điểm nộp sớm hơn ngày mở bài tập, thủ tục định dạng `@Open_Date` theo chuẩn `YYYY-MM-DD` bằng `CONVERT(VARCHAR(10), @Open_Date, 23)` và báo lỗi (State `9`). Bài nộp sau `Deadline` vẫn được chấp nhận theo nghiệp vụ và sẽ được gắn nhãn `Trễ hạn`.
+
+### Tầng 4. Ghi dữ liệu nguyên tử trong giao dịch
+
+Toàn bộ thao tác thay đổi dữ liệu nằm trong khối `BEGIN TRY ... END TRY` và `BEGIN CATCH ... END CATCH`:
+
+1. Mở giao dịch bằng `BEGIN TRANSACTION`.
+2. Tìm bài nộp cũ của cặp `(@Assignment_ID, @Student_ID)` trong `[dbo].[Submission]` bằng gợi ý khóa `WITH (UPDLOCK, HOLDLOCK)`. Hai gợi ý khóa này giữ khóa cập nhật và khóa phạm vi đến hết giao dịch, ngăn hai phiên nộp lại đồng thời vượt qua bước kiểm tra và gây lỗi trùng khóa `UQ_Submission_Assignment_Student`.
+3. Nếu tìm thấy `@Old_Submission_ID`, thủ tục gọi `EXEC [dbo].[sp_DeleteSubmission] @ID = @Old_Submission_ID, @Assignment_ID = @Assignment_ID, @Student_ID = @Student_ID`. Thao tác này tự động kiểm tra bài nộp cũ đã được chấm điểm hoặc có nhận xét đồng đẳng hay chưa, đồng thời xóa tầng các tệp đính kèm cũ qua `ON DELETE CASCADE`.
+4. Chèn bản ghi bài nộp mới vào `[dbo].[Submission]` với `Final_Score = NULL`.
+5. Lấy khóa chính vừa sinh bằng `CAST(SCOPE_IDENTITY() AS SMALLINT)` lưu vào `@New_Submission_ID`. Hàm `SCOPE_IDENTITY()` chỉ lấy giá trị định danh trong phạm vi hiện tại nên an toàn trước các trigger hoặc phiên khác.
+6. Nếu `@File_Url IS NOT NULL`, chèn bản ghi tương ứng vào `[dbo].[Submission_file_url]` bằng `@New_Submission_ID`.
+7. Xác nhận giao dịch bằng `COMMIT TRANSACTION`.
+8. Đánh giá trạng thái nộp bài dựa trên `@Deadline`. Thủ tục gán `N'Đúng hạn'` khi `@Submit_Time <= @Deadline` và `N'Trễ hạn'` khi `@Submit_Time > @Deadline`, sau đó trả về 1 dòng kết quả.
+9. Nếu bất kỳ lệnh nào trong `TRY` phát sinh lỗi (bao gồm lỗi từ `sp_DeleteSubmission` hoặc lỗi hệ thống), luồng nhảy sang `BEGIN CATCH`. Khối `CATCH` kiểm tra `IF @@TRANCOUNT > 0` để gọi `ROLLBACK TRANSACTION`, sau đó gọi `THROW;` nhằm chuyển tiếp nguyên vẹn mã lỗi, mức độ, trạng thái và thông điệp gốc cho người gọi.
+
+## 3. Danh sách mã lỗi
+
+Tất cả lỗi kiểm tra nội bộ của `[dbo].[sp_InsertSubmission]` dùng `RAISERROR` với `Severity = 16` và mã `State` riêng từ `1` đến `9`. Lỗi phát sinh trong `sp_DeleteSubmission` được hoàn tác giao dịch và chuyển tiếp nguyên vẹn qua `THROW;`.
+
+| Tầng | Severity | State | Điều kiện kích hoạt | Thông báo lỗi |
+|---|---|---|---|---|
+| Tầng 1 | `16` | `1` | `@Assignment_ID IS NULL OR @Assignment_ID <= 0` | `Mã bài tập (Assignment_ID) không hợp lệ hoặc bị bỏ trống.` |
+| Tầng 1 | `16` | `2` | `@Student_ID IS NULL OR @Student_ID <= 0` | `Mã sinh viên (Student_ID) không hợp lệ hoặc bị bỏ trống.` |
+| Tầng 1 | `16` | `3` | `@Title IS NULL OR LEN(LTRIM(RTRIM(@Title))) = 0` | `Tiêu đề bài nộp (Title) không được để trống.` |
+| Tầng 1 | `16` | `4` | `@File_Url IS NOT NULL AND LEN(LTRIM(RTRIM(@File_Url))) = 0` | `Đường dẫn tệp đính kèm (File_Url) không được là chuỗi rỗng.` |
+| Tầng 1 | `16` | `5` | `@File_Url IS NOT NULL AND @File_Url NOT LIKE 'http://%' AND @File_Url NOT LIKE 'https://%'` | `Đường dẫn tệp đính kèm (File_Url) phải bắt đầu bằng http:// hoặc https://.` |
+| Tầng 2 | `16` | `6` | Không tìm thấy `@Student_ID` trong `[dbo].[Student]` | `Sinh viên với mã ID = %d không tồn tại trong hệ thống.` |
+| Tầng 2 | `16` | `7` | Không tìm thấy `@Assignment_ID` trong `[dbo].[Assignment]` nối với `[dbo].[Resource]` | `Bài tập (Assignment) với mã ID = %d không tồn tại trong hệ thống.` |
+| Tầng 3 | `16` | `8` | Sinh viên chưa đăng ký lớp học phần (`Enrolls`) có chứa bài tập (`Includes`) trên đủ 4 khóa của `Session` | `Sinh viên (ID = %d) chưa đăng ký lớp học phần chứa bài tập (ID = %d).` |
+| Tầng 3 | `16` | `9` | `CAST(@Submit_Time AS DATE) < @Open_Date` | `Chưa đến ngày mở nộp bài tập (ngày mở: %s).` |
+| Tầng 4 | `16` (chuyển tiếp) | Theo `sp_DeleteSubmission` | Nộp lại bài nhưng bài nộp cũ đã có `Final_Score` hoặc đã có bản ghi trong `Peer_review`, nên `sp_DeleteSubmission` từ chối xóa | Giao dịch được `ROLLBACK` và thông báo gốc từ `sp_DeleteSubmission` được chuyển tiếp qua `THROW;`. |
