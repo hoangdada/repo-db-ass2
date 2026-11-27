@@ -1,3 +1,6 @@
+USE bk_db_ass2;
+GO
+
 CREATE OR ALTER PROCEDURE sp_UpdateSubmission
     @Submission_ID  SMALLINT,
     @Assignment_ID  SMALLINT,
@@ -5,6 +8,7 @@ CREATE OR ALTER PROCEDURE sp_UpdateSubmission
     @New_title      NVARCHAR(250)
 AS
 BEGIN
+    SET NOCOUNT ON;
 
     IF @Submission_ID IS NULL OR @Assignment_ID IS NULL OR @Student_ID IS NULL
     BEGIN
@@ -54,7 +58,7 @@ BEGIN
     FROM Assignment AS A
     WHERE ID = @Assignment_ID;
 
-    DECLARE @DiffMinztes INT = ABS(DATEDIFF(MINUTE, @Deadline, @CurrentTime));
+    DECLARE @DiffMinutes INT = ABS(DATEDIFF(MINUTE, @Deadline, @CurrentTime));
 
     IF @CurrentTime <= @Deadline
     BEGIN
