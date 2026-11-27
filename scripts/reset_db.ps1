@@ -172,7 +172,11 @@ END
 
     foreach ($script in $scripts) {
         $sqlContent = [System.IO.File]::ReadAllText($script.FullName, [System.Text.Encoding]::UTF8)
-        $batches = Split-SqlBatches -SqlContent $sqlContent
+        $batches = if ([string]::IsNullOrWhiteSpace($sqlContent)) { @() } else { Split-SqlBatches -SqlContent $sqlContent }
+        if ($batches.Count -eq 0) {
+            Write-Host ("[SKIP] {0} (empty)" -f $script.Name)
+            continue
+        }
         $fileWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
         for ($i = 0; $i -lt $batches.Count; $i++) {
@@ -211,6 +215,9 @@ finally {
 }
 
 $tableStats = New-Object System.Collections.Generic.List[object]
+$procedureNames = New-Object System.Collections.Generic.List[string]
+$triggerNames = New-Object System.Collections.Generic.List[string]
+$functionNames = New-Object System.Collections.Generic.List[string]
 $verifyConnection = New-Object System.Data.SqlClient.SqlConnection((New-SqlConnectionString -ServerName $resolvedServer -DatabaseName $Database -TimeoutSeconds 15))
 try {
     $verifyConnection.Open()
@@ -239,6 +246,45 @@ ORDER BY t.name;
     }
     finally {
         $reader.Dispose()
+    }
+
+    $procCommand = $verifyConnection.CreateCommand()
+    $procCommand.CommandTimeout = 30
+    $procCommand.CommandText = "SELECT name FROM sys.procedures WHERE is_ms_shipped = 0 ORDER BY name;"
+    $procReader = $procCommand.ExecuteReader()
+    try {
+        while ($procReader.Read()) {
+            $procedureNames.Add($procReader.GetString(0))
+        }
+    }
+    finally {
+        $procReader.Dispose()
+    }
+
+    $trigCommand = $verifyConnection.CreateCommand()
+    $trigCommand.CommandTimeout = 30
+    $trigCommand.CommandText = "SELECT name FROM sys.triggers WHERE parent_class = 1 AND is_ms_shipped = 0 ORDER BY name;"
+    $trigReader = $trigCommand.ExecuteReader()
+    try {
+        while ($trigReader.Read()) {
+            $triggerNames.Add($trigReader.GetString(0))
+        }
+    }
+    finally {
+        $trigReader.Dispose()
+    }
+
+    $funcCommand = $verifyConnection.CreateCommand()
+    $funcCommand.CommandTimeout = 30
+    $funcCommand.CommandText = "SELECT name FROM sys.objects WHERE type IN ('FN', 'IF', 'TF') AND is_ms_shipped = 0 ORDER BY name;"
+    $funcReader = $funcCommand.ExecuteReader()
+    try {
+        while ($funcReader.Read()) {
+            $functionNames.Add($funcReader.GetString(0))
+        }
+    }
+    finally {
+        $funcReader.Dispose()
     }
 }
 catch [System.Data.SqlClient.SqlException] {
@@ -274,4 +320,13 @@ foreach ($entry in $tableStats) {
     Write-Host ("{0,-$nameWidth}   {1,$rowWidth}" -f $entry.TableName, $entry.RowCount)
 }
 Write-Host $divider
-Write-Host ("Tables: {0} | Total rows: {1} | Total elapsed: {2} ms" -f $totalTables, $totalRows, $totalWatch.ElapsedMilliseconds)
+
+$procDisplay = if ($procedureNames.Count -gt 0) { $procedureNames -join ", " } else { "(none)" }
+$trigDisplay = if ($triggerNames.Count -gt 0) { $triggerNames -join ", " } else { "(none)" }
+$funcDisplay = if ($functionNames.Count -gt 0) { $functionNames -join ", " } else { "(none)" }
+
+Write-Host ""
+Write-Host ("Procedures ({0}): {1}" -f $procedureNames.Count, $procDisplay)
+Write-Host ("Triggers   ({0}): {1}" -f $triggerNames.Count, $trigDisplay)
+Write-Host ("Functions  ({0}): {1}" -f $functionNames.Count, $funcDisplay)
+Write-Host ("Tables: {0} | Total rows: {1} | Procedures: {2} | Triggers: {3} | Functions: {4} | Total elapsed: {5} ms" -f $totalTables, $totalRows, $procedureNames.Count, $triggerNames.Count, $functionNames.Count, $totalWatch.ElapsedMilliseconds)
